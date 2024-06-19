@@ -1,14 +1,24 @@
 #include "E100.h"
 
 void setup() {
- Serial.begin(9600);
+  Serial.begin(9600);
+  Serial2.begin(9600);
+  pinModeSetup();
+  Wire.begin();
   i2cSetup();
+
+  mbRTU.begin(1, Serial2);
+  mbRTU.preTransmission(preTransmission);
+  mbRTU.postTransmission(postTransmission);
+  delay(500);  //wait for system to boot up
+
+  Serial.println("OK");
 }
 
 void loop() {
   i2cTransceive(dataTime);
   printData(printTime);
-
+  SerialCLI();
   if(!manual){
     oilTempControl();
     waterDropoutControl();

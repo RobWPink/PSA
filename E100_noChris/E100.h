@@ -12,7 +12,10 @@
 #define EVO_SLAVE_ID 1
 #define PSA1_SLAVE_ID 3
 #define PSA2_SLAVE_ID 4
-
+#define RE_DE1 12
+#define ESTOP_BREAK 40
+#define LED_PWR 22
+#define TRACO_24VDC 23
 
 #define speedAddr_old 0x091A
 #define speedAddr 0x2001

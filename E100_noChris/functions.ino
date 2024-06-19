@@ -268,13 +268,15 @@ void i2cSetup(){
 
 }
 
+void preTransmission() {digitalWrite(RE_DE1, 1);}
+void postTransmission() {digitalWrite(RE_DE1, 0);}
 
-// void pinModeSetup(){
-//   pinMode(ESTOP_BREAK, OUTPUT);
-//   digitalWrite(ESTOP_BREAK, HIGH);  // HIGH to keep Estop loop intact
-//   pinMode(LED_PWR, OUTPUT);
-//   digitalWrite(LED_PWR, HIGH);  // HIGH to provide power to Daughterboard
-//   pinMode(TRACO_24VDC, OUTPUT);
-//   digitalWrite(TRACO_24VDC, HIGH);  // HIGH to enable 24V Power Supply
-// }
+void pinModeSetup(){
+  pinMode(ESTOP_BREAK, OUTPUT);
+  digitalWrite(ESTOP_BREAK, HIGH);  // HIGH to keep Estop loop intact
+  pinMode(LED_PWR, OUTPUT);
+  digitalWrite(LED_PWR, HIGH);  // HIGH to provide power to Daughterboard
+  pinMode(TRACO_24VDC, OUTPUT);
+  digitalWrite(TRACO_24VDC, HIGH);  // HIGH to enable 24V Power Supply
+}
  
