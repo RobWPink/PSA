@@ -40,7 +40,7 @@ Adafruit_MCP4728 dac1;
 
 TwoWire i2c(20, 21);
 
-PI4IOE5V6534Q gpio(0x23, i2c);
+PI4IOE5V6534Q gpio(0x22, i2c);
 
 enum stt{
   R050_OK,
@@ -247,7 +247,7 @@ struct Digital {
   {"READYIP_R050_1","READYIP1",&READYIP1,0,gpio,P3_6},
   {"READYIP_R050_2","READYIP2",&READYIP2,0,gpio,P3_7}
 };
-int DOsize = 20;
+int DOsize = 17;
 int DIsize = 12;
 uint8_t mcpExist = 0;
 double mxy = 0;
