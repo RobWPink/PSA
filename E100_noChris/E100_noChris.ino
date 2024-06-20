@@ -17,6 +17,7 @@ void setup() {
 
 void loop() {
   i2cTransceive(dataTime);
+  RS485transceive();
   printData(printTime);
   SerialCLI();
   if(!manual){

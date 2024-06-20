@@ -66,7 +66,7 @@ void RS485transceive(){
   if(*RS485data[rtuCnt].value != RS485data[rtuCnt].prev && RS485data[rtuCnt].ID != -1){
     uint8_t result = mbRTU.writeSingleRegister(RS485data[rtuCnt].ID,RS485data[rtuCnt].reg,*RS485data[rtuCnt].value);
     RS485data[rtuCnt].prev = *RS485data[rtuCnt].value;
-    if (result != mbRTU.ku8MBSuccess){
+    if (result != mbRTU.ku8MBSuccess && tog[5]){
       Serial.print(RS485data[rtuCnt].name);
       Serial.print(" Connection Error: 0x");
       Serial.println(result,HEX);

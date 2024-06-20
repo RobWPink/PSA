@@ -71,6 +71,9 @@ void SerialCLI() {
       else if(argStr.equalsIgnoreCase("rs485")) {
         tog[4] = !tog[4];
       }
+      else if(argStr.equalsIgnoreCase("err")) {
+        tog[5] = !tog[5];
+      }
 
       else if(argStr.equalsIgnoreCase("manual")) {
         manual = !manual;

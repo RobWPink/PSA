@@ -51,7 +51,7 @@ enum stt{
 unsigned long timer[5] = {0};
 unsigned long debouncer[4] = {0};
 unsigned long printTimer = 0;
-bool tog[5] = {false};
+bool tog[6] = {false};
 unsigned long dataTimer = 0;
 bool heater = false;
 bool manual = true;
