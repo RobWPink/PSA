@@ -23,6 +23,7 @@ unsigned long flashTimer[3] = {0};
 unsigned long debouncer[6] = {0};
 bool flashTog[3] = {false};
 bool heater = false;
+bool overLvl = false;
 double mxy = 0;
 bool greenButton, redButton = false;
 String errString = "";
@@ -64,25 +65,26 @@ void flashDriver(){
 }
 
 void waterDropoutControl(){
-  if(test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_HIGH_LEVEL_DO_1)){if(!debouncer[0]){debouncer[0] = millis();}}
+
+  if(!test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_HIGH_LEVEL_DO_1)){if(!debouncer[0]){debouncer[0] = millis();}} //LSH's are inverted, LOW = water, HIGH = no water
   else{debouncer[0] = 0;}
   if(millis() - debouncer[0] > 300 && debouncer[0]){
     set_config_bit(CONFIG_PARAM_RELAYS,true,RELAY_BIT_VE311);
     debouncer[0] = 0;
   }
-  if(test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_LOW_LEVEL_DO_1)){if(!debouncer[1]){debouncer[1] = millis();}}
+  if(!test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_LOW_LEVEL_DO_1)){if(!debouncer[1]){debouncer[1] = millis();}}
   else{debouncer[1] = 0;}
   if(millis() - debouncer[1] > 300 && debouncer[1]){
     set_config_bit(CONFIG_PARAM_RELAYS,false,RELAY_BIT_VE311);
     debouncer[1] = 0;
   }
-  if(test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_HIGH_LEVEL_DO_2)){if(!debouncer[2]){debouncer[2] = millis();}}
+  if(!test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_HIGH_LEVEL_DO_2)){if(!debouncer[2]){debouncer[2] = millis();}}
   else{debouncer[2] = 0;}
   if(millis() - debouncer[2] > 300 && debouncer[2]){
     set_config_bit(CONFIG_PARAM_RELAYS,true,RELAY_BIT_VE511);
     debouncer[2] = 0;
   }
-  if(test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_LOW_LEVEL_DO_2)){if(!debouncer[3]){debouncer[3] = millis();}}
+  if(!test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_LOW_LEVEL_DO_2)){if(!debouncer[3]){debouncer[3] = millis();}}
   else{debouncer[3] = 0;}
   if(millis() - debouncer[3] > 300 && debouncer[3]){
     set_config_bit(CONFIG_PARAM_RELAYS,false,RELAY_BIT_VE511);
