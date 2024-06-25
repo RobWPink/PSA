@@ -5,6 +5,8 @@ void setup() {
   Serial2.begin(9600);
   pinModeSetup();
   Wire.begin();
+  Wire1.begin();
+  Wire1.beginTransmission(0x60);
   i2cSetup();
 
   mbRTU.begin(1, Serial2);

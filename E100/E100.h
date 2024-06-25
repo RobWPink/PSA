@@ -1,12 +1,11 @@
-#include <Wire.h>
-#include <SPI.h>
-#include <ADS7828.h>
-#include <PI4IOE5V6534Q.h>
-#include "Adafruit_MCP9600.h"
-#include <Ewma.h>
-#include <ModbusMaster_oneH2.h>
+#if !defined(E100_H)
+  #define  E100_H
+  #include <stdint.h>
 
-ModbusMaster mbRTU;
+  #define HARDWARE_GIGA     ARDUINO_GIGA
+  #define HARDWARE_1_2
 
-unsigned long timer[5] = {0};
-unsigned long debouncer[4] = {0};
+  #define DEBUG_MODE              1
+
+ void loop_two(void);
+#endif

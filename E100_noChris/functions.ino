@@ -127,7 +127,7 @@ bool operationCheck(){
 void i2cSetup(){
   adc1.init();
   while(1){
-    if (!dac1.begin()){
+    if (!dac1.begin(I2C_ADDRESS)){
       Serial.println("Failed to find MCP4728 chip");
       delay(3000);
     }

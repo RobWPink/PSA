@@ -1,81 +1,126 @@
-#include "E100.h"
+#include <Arduino.h>
+#include <ModbusRTU.h>
+#include "e100.h"
+#include "ble_e100.h"
+#include "wifi_e100.h"
+#include "config_e100.h"
+#include "PI4IOE5V6534Q.h"
+#include <ADS7828.h>
+#include "io_e100.h"
+#include "eeprom.h"
+#include "E100_control.h"
+#include "modbus_e100.h"
 
-double TT447, TT444, PT454;
-double HTR443_time,HEATER_time,EVO_time;
-double TT444_set = 100;
-double TT447_set = 83;
-double PT454_set = 8.5;
+#define   U65_IO_ADDR                   0x22    // For some reason address is multipled by 2 on the schematic
+#define   EXP1_IO_ADDR                  0x48    // ADS7828 ADDRESS (SAME AS DATASHEET)           
 
-PID heatingElementPID(&TT447, &HTR443_time, &TT444_set, 2, 0, 0, DIRECT);
-PID oilTempPID(&TT444, &HEATER_time, &TT447_set, 2, 0, 0, DIRECT);
-PID evoSpeedPID(&PT454, &EVO_time, &PT454_set, 1, 0, 0, DIRECT);
+#define   PORTB_12                      74
+#define   PORTI_3                       72
+#define   PORTD_3                       75
+#define   PORTC_1                       73
+
+//-----------------------------------------------//
+//------------VFD addresses-------------------------//
+//--------------------------------------------------//
+#define   SpeedAdr              0x2001//0x091A
+#define   RUNCOMAdr             0x2000//0x091B
+#define   DirectionAdr          0x091C
+#define   ExtFaultAdr           0x091D
+#define   FaultResetAdr         0x091E
+#define   StopMethod            0x0100
+#define   DecelTime             0x010D // 0x0102
+#define   VFD_SLAVE_ID                  1
+
+ModbusRTU VFD;
+int process_controller;
+
+bool cbWrite(Modbus::ResultCode event, uint16_t transactionId, void* data) {
+  Serial.print("Request result: 0x");
+  Serial.print(event, HEX);
+  Serial.println("");
+  return true;
+}
 
 void setup() {
- Serial.begin(9600);
+  pinMode(D3, INPUT); // DDR Global RS-485 - Set to input so that the data direction on the 485 Txcvr is unspecified 
+  pinMode(D4, INPUT); // DDR Local RS-485 - Set to input so that the data direction on the 485 Txcvr is unspecified 
 
+  Serial.begin(9600);
+  while(!Serial);
+
+  Serial4.begin(9600, SERIAL_8N1);      // GLOBAL RS-485
+  while(!Serial4);                      // Why is this Serial4 and not Serial6 as shown in the product description?
+
+  init_config();
+  Serial.println("Initialized!");
+  #if defined(HARDWARE_GIGA)
+    wifi_init();
+    ble_init();
+  #endif 
+
+  io_setup();
+  eeprom_setup();
+
+  Serial2.begin(9600, SERIAL_8N1);     // Local RS-485
+  VFD.begin(&Serial2, SERIAL_8N1);
+  VFD.setBaudrate(9600);
+  VFD.master();
+  process_controller = 0; 
 }
 
 void loop() {
-  oilTempControl();
-  waterDropoutControl();
+  // put your main code here, to run repeatedly:
+  #if defined(HARDWARE_GIGA)
+    ble_loop();
+    wifi_loop();      // Process any WiFi related data
+  #endif
+  // checkADS7828();
+  loop_two();   // This needs to remain here as it is an alternative loop for when BLE/WiFi connect 
+}               // and become blocking functions
 
+// This loop is called from WiFi/BLE when connected as they are blocking functions. Without this there will 
+// be no main loop when they are connected. 
+void loop_two()
+{
+  uint16_t mb_temp_value; 
 
-  switch(STATE){
-    case R050_OK:
-      if(get_config_parameter(PARAM_TT447) < 75){
-        set_config_bit(CONFIG_PARAM_RELAYS,FALSE,RELAY_BIT_READYOP1);
-        set_config_bit(CONFIG_PARAM_RELAYS,FALSE,RELAY_BIT_READYOP2);
-        set_config_bit(CONFIG_PARAM_RELAYS,FALSE,RELAY_BIT_RPSA1_VFD_RUN);
-        set_config_bit(CONFIG_PARAM_RELAYS,FALSE,RPSA1_GAS_XV);
-      }
-      else if(get_config_parameter(PARAM_TT447) > 80){
-          if(operationCheck()){
-            set_config_bit(CONFIG_PARAM_RELAYS,TRUE,RELAY_BIT_READYOP1);
-            set_config_bit(CONFIG_PARAM_RELAYS,TRUE,RELAY_BIT_READYOP2);
-            set_config_bit(CONFIG_PARAM_RELAYS,test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_READYIP1),RELAY_BIT_RPSA1_VFD_RUN);
-            set_config_bit(CONFIG_PARAM_RELAYS,test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_READYIP1),RPSA1_GAS_XV);
-          }
-          else{
-            set_config_bit(CONFIG_PARAM_RELAYS,FALSE,RELAY_BIT_READYOP1);
-            set_config_bit(CONFIG_PARAM_RELAYS,FALSE,RELAY_BIT_READYOP2);
-            set_config_bit(CONFIG_PARAM_RELAYS,FALSE,RELAY_BIT_RPSA1_VFD_RUN);
-            set_config_bit(CONFIG_PARAM_RELAYS,FALSE,RPSA1_GAS_XV);
-          }
-        }
-      }
-      if(test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_READYIP1) && 
-         test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_READYIP2) &&
-         test_config_parameter(CONFIG_PARAM_RELAYS,RELAY_BIT_READYOP1) &&
-         test_config_parameter(CONFIG_PARAM_RELAYS,RELAY_BIT_READYOP2)){
-        STATE = INIT_EVO;
-      }
-    case INIT_EVO:
-      double mxy = 0;
-      if(test_config_parameter(CONFIG_PARAM_RELAYS,RELAY_BIT_READYOP1)){
-        if(get_config_parameter(PARAM_SUCTIONPSI) > 15){
-          set_config_parameter(EVOHz,20);
-        }
-        if(get_config_parameter(PARAM_EVOHz) == 20){
-          if(!timer[0]){timer[0] = millis();}
-          else if(millis() - timer[0] < 60000*2 && timer[0]){ //decrease ACT1 pos from 75% to 25% over 2min
-            mxy = (double)((-1*timer[0]/2400)+75)/100;
-            if(mxy >= 0.25){set_config_parameter(ACT1_POS,ACT1_MAX*mxy)};
-          } //hold ACT1 pos for 1min
-          else if(60000*3 < millis() - timer[0] < 60000*8){ //increase ACT1 pos from 25% to 75% over 5min
-            mxy = (double)((-1*timer[0]/6000)+25)/100;
-            if(mxy <= 0.75){set_config_parameter(ACT1_POS,ACT1_MAX*mxy)};
-          }
-          else if(millis() - timer[0] > 60000*8){
-            STATE = BALANCE_EVO;
-          }
-        }
-      }
-    break;
-
-    case BALANCE_EVO:
-      if(get_config_parameter(PARAM_SUCTIONPSI) > 9){set_config_parameter(EVOHz,get_config_parameter(PARAM_EVOHz)++);}
-      else if(get_config_parameter(PARAM_SUCTIONPSI) < 8){set_config_parameter(EVOHz,get_config_parameter(PARAM_EVOHz)++);}//maybe use a PID controller here
+  digital_io_loop();
+  analog_io_loop();
+  // If we are not under manual control, then run the automation routine!
+  if (!test_config_parameter(CONFIG_PARAM_OP_STATE_ALL,OP_STATE_MANUAL_CONTROL)){
+    E100control();
   }
 
+  // ***** Receive and process the global RS_485 data *****************
+  // Start by reading all available bytes in the buffer and storing them for processing
+  while (Serial4.available()){
+    char thisChar = Serial4.read();
+    modbuxRxData(thisChar, RS_485_BUFFER);
+  }
+
+  // Check the RS-485 Serial data MODBUS buffer and send any required responses to the Serial port
+  if (modbus_loop(RS_485_BUFFER)){
+    int tx_bytes = get_tx_bytes(RS_485_BUFFER);
+    Serial4.write(get_tx_buffer(RS_485_BUFFER), tx_bytes);
+  }
+
+  // *********  VFD Writes *****************
+  // 1 in 25 
+  if ((process_controller % 25) == 0){
+    mb_temp_value = get_config_parameter(CONFIG_PARAM_VFD_ON_OFF_SETTING);
+    VFD.writeHreg(VFD_SLAVE_ID, RUNCOMAdr, &mb_temp_value, 1, cbWrite);
+    while (VFD.slave()) {
+      VFD.task();
+      yield();
+    }
+    
+    mb_temp_value = get_config_parameter(CONFIG_PARAM_VFD_SPEED_SETTING);
+    VFD.writeHreg(VFD_SLAVE_ID, SpeedAdr, &mb_temp_value, 1, cbWrite);
+    while (VFD.slave()) {
+      VFD.task();
+      yield();
+    }
+  }
+  process_controller++;
 }
 

@@ -16,7 +16,7 @@
 #define ESTOP_BREAK 40
 #define LED_PWR 22
 #define TRACO_24VDC 23
-
+#define I2C_ADDRESS (0x60)
 #define speedAddr_old 0x091A
 #define speedAddr 0x2001
 #define speedFbAddr 0x2103
