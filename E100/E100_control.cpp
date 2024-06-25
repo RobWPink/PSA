@@ -10,10 +10,12 @@ enum stt{
   R050_OK,
   CHECK_EVO,
   INIT_EVO,
+  RAMP_DOWN,
+  RAMP_UP,
   BALANCE_EVO,
   SHUTDOWN,
   ESTOP
-}STATE;
+}STATE,PREV;
 
 
 unsigned long timer = 0;
@@ -129,33 +131,36 @@ void E100control(){
   }
 
   if(redButton){
-    timer = 0;
     errString = "Manual Shutdown Detected.";
+    STATE = SHUTDOWN;
+  }
+
+  if(STATE > R050_OK && !test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_READY_IP_R050_1)){
+    errString = "Lost OK signal from Reformer 1.";
     STATE = SHUTDOWN;
   }
 
   set_config_bit(CONFIG_PARAM_RELAYS,true,RELAY_BIT_LOCAL_INTERLOCK);
 
-  if(STATE != ESTOP){set_config_bit(CONFIG_PARAM_RELAYS,test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_LSR_IP),RELAY_BIT_RED_PILOT);}
   set_config_bit(CONFIG_PARAM_RELAYS,!test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_LSR_IP),RELAY_BIT_AMBER_PILOT);
 
   if(test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_LOCAL_ESTOP)){
-    timer = 0;
     errString = "ESTOP Detected!";
     STATE = ESTOP;
+  }
+
+  if(STATE != PREV){
+    timer = 0;
+    PREV = STATE;
   }
   switch(STATE){
     case IDLE:
       set_config_bit(CONFIG_PARAM_RELAYS,false,RELAY_BIT_GREEN_PILOT);
-      flashGreen = 0;
-      if(greenButton && !test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_LSR_IP) && oilOK){
-        STATE = R050_OK;
-        timer = 0;
-      }
+      if(greenButton && !test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_LSR_IP) && oilOK){ STATE = R050_OK; }
     break;
-
+		
     case R050_OK:
-      flashGreen = 500;
+      flashGreen = 250;
       if(get_config_parameter(CONFIG_PARAM_TC447) < 25){
         set_config_bit(CONFIG_PARAM_RELAYS,false,RELAY_BIT_READY_R050_1);
         set_config_bit(CONFIG_PARAM_RELAYS,false,RELAY_BIT_PSA1_VFD_RUN);
@@ -175,68 +180,52 @@ void E100control(){
         }
       }
       if(test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_READY_IP_R050_1) &&
-        test_config_parameter(CONFIG_PARAM_RELAYS,RELAY_BIT_READY_R050_1)){
-        STATE = CHECK_EVO;
-      }
+        test_config_parameter(CONFIG_PARAM_RELAYS,RELAY_BIT_READY_R050_1)){ STATE = CHECK_EVO; }
     break;
 
     case CHECK_EVO:
-      if(test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_READY_IP_R050_1)){
-        if(get_config_parameter(CONFIG_PARAM_GAS_SUCTION_PX) > 15){STATE = INIT_EVO;}
-      }
-      else{
-        timer = 0;
-        STATE = SHUTDOWN;
-        errString = "Lost Ready signal FROM R050.";
-      }
+      flashGreen = 500;
+      if(get_config_parameter(CONFIG_PARAM_GAS_SUCTION_PX) > 15){ STATE = INIT_EVO; }
     break;
 
     case INIT_EVO:
-      flashGreen = 250;
-      if(test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_READY_IP_R050_1)){ 
-        if(!timer){
-          timer = millis();
-          set_config_bit(CONFIG_PARAM_RELAYS,true,RELAY_BIT_EVO_VFD_RUN);
-          set_config_parameter(CONFIG_PARAM_AO_4,20);
-        }
-        else if(millis() - timer < 60000*2 && timer){ //decrease ACT1 pos from 75% to 25% over 2min
-          mxy = (double)((-1*(millis()-timer)/2400)+75)/100;
-          if(mxy >= 0.25){set_config_parameter(CONFIG_PARAM_AO_1,(double)100*mxy);}//ACT1 Pos 0-100%
-        } //hold ACT1 pos for 1min
-        else if(60000*3 < millis() - timer < 60000*8){ //increase ACT1 pos from 25% to 75% over 5min
-          mxy = (double)((-1*(millis()-timer-60000*3)/6000)+25)/100;
-          if(mxy <= 0.75){set_config_parameter(CONFIG_PARAM_AO_1,(double)100*mxy);} //ACT1 Pos 0-100%
-        }
-        else if(millis() - timer > 60000*8){
-          timer = 0;
-          STATE = BALANCE_EVO;
-        }
+      if(!timer){
+        timer = millis();
+        set_config_bit(CONFIG_PARAM_RELAYS,true,RELAY_BIT_EVO_VFD_RUN);
+        set_config_parameter(CONFIG_PARAM_AO_4,20);
+        set_config_parameter(CONFIG_PARAM_AO_1,75);
       }
-      else{
-        timer = 0;
-        STATE = SHUTDOWN;
-        errString = "Lost Ready signal FROM R050.";
-      }
+      if(millis() - timer > 3000 && timer){ STATE = RAMP_UP; }
+    break;
+    
+    case RAMP_DOWN:
+      flashGreen = 750;
+      if(!timer){timer = millis();}
+      mxy = ((double)-50/120000)*(millis() - timer)+75.0;
+      if(mxy >= 25.0){set_config_parameter(CONFIG_PARAM_AO_1,mxy);}
+      if(millis() - timer > (double)60000*3 && timer){ STATE = RAMP_UP; }
+    break;
+
+    case RAMP_UP:
+      flashGreen = 1000;
+      if(!timer){timer = millis();}
+        mxy = ((double)50/300000)*(millis() - timer)+25.0;
+        if(mxy <= 75.0){set_config_parameter(CONFIG_PARAM_AO_1,mxy);}
+        if(millis() - timer > (double)60000*5 && timer){ STATE = BALANCE_EVO; }
     break;
 
     case BALANCE_EVO:
       flashGreen = 0;
       set_config_bit(CONFIG_PARAM_RELAYS,true,RELAY_BIT_GREEN_PILOT);
-      if(test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_READY_IP_R050_1)){ 
-        if(!timer){timer = millis();}
-        if(millis() - timer > (unsigned long)get_config_parameter(CONFIG_PARAM_PRODUCTION_EVO_DELTA_TIME) && timer){
-          if(get_config_parameter(CONFIG_PARAM_GAS_SUCTION_PX) > 9){
-            set_config_parameter(CONFIG_PARAM_AO_4,get_config_parameter(CONFIG_PARAM_AO_4)+(double)get_config_parameter(CONFIG_PARAM_PRODUCTION_EVO_DELTA_STEP));
-          }else if(get_config_parameter(CONFIG_PARAM_GAS_SUCTION_PX) < 8){
-            set_config_parameter(CONFIG_PARAM_AO_4,get_config_parameter(CONFIG_PARAM_AO_4)-(double)get_config_parameter(CONFIG_PARAM_PRODUCTION_EVO_DELTA_STEP));
-          }//maybe use a PID controller here
-          timer = millis();
+      if(!timer){timer = millis();}
+      if(millis() - timer > (unsigned long)get_config_parameter(CONFIG_PARAM_PRODUCTION_EVO_DELTA_TIME) && timer){
+        if(get_config_parameter(CONFIG_PARAM_GAS_SUCTION_PX) > 9){
+          set_config_parameter(CONFIG_PARAM_AO_4,get_config_parameter(CONFIG_PARAM_AO_4)+(double)get_config_parameter(CONFIG_PARAM_PRODUCTION_EVO_DELTA_STEP));
         }
-      }
-      else{
-        timer = 0;
-        STATE = SHUTDOWN;
-        errString = "Lost Ready signal FROM R050.";
+        else if(get_config_parameter(CONFIG_PARAM_GAS_SUCTION_PX) < 8){
+          set_config_parameter(CONFIG_PARAM_AO_4,get_config_parameter(CONFIG_PARAM_AO_4)-(double)get_config_parameter(CONFIG_PARAM_PRODUCTION_EVO_DELTA_STEP));
+        }
+        timer = millis();
       }
       
     break;
@@ -253,10 +242,8 @@ void E100control(){
         set_config_bit(CONFIG_PARAM_RELAYS,true,RELAY_BIT_LOCAL_INTERLOCK);
         // Serial.println(errString); // Debug use
       }
-      if(millis() - timer > 5000 && timer){
-        timer = 0;
-        STATE = IDLE;
-      }
+      set_config_bit(CONFIG_PARAM_RELAYS,true,RELAY_BIT_RED_PILOT);
+      if(millis() - timer > 3000 && timer){ STATE = IDLE; }
     break;
 
     case ESTOP:
@@ -274,7 +261,6 @@ void E100control(){
       flashRed = 250;
       if(!test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_LOCAL_ESTOP)){
         flashRed = 0;
-        timer = 0;
         STATE = IDLE;
       }
     break;
