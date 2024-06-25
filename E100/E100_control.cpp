@@ -195,7 +195,7 @@ void E100control(){
         set_config_parameter(CONFIG_PARAM_AO_4,20);
         set_config_parameter(CONFIG_PARAM_AO_1,75);
       }
-      if(millis() - timer > 3000 && timer){ STATE = RAMP_UP; }
+      if(millis() - timer > 3000 && timer){ STATE = RAMP_DOWN; }
     break;
     
     case RAMP_DOWN:
@@ -243,7 +243,7 @@ void E100control(){
         // Serial.println(errString); // Debug use
       }
       set_config_bit(CONFIG_PARAM_RELAYS,true,RELAY_BIT_RED_PILOT);
-      if(millis() - timer > 3000 && timer){ STATE = IDLE; }
+      if(millis() - timer > 3000 && timer){ STATE = IDLE; set_config_bit(CONFIG_PARAM_RELAYS,false,RELAY_BIT_RED_PILOT);}
     break;
 
     case ESTOP:
