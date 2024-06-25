@@ -147,10 +147,13 @@ void E100control(){
   switch(STATE){
     case IDLE:
       set_config_bit(CONFIG_PARAM_RELAYS,false,RELAY_BIT_GREEN_PILOT);
+      flashGreen = 0;
       if(greenButton && !test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_LSR_IP) && oilOK){
         STATE = R050_OK;
         timer = 0;
       }
+    break;
+
     case R050_OK:
       flashGreen = 500;
       if(get_config_parameter(CONFIG_PARAM_TC447) < 25){
@@ -197,11 +200,11 @@ void E100control(){
           set_config_parameter(CONFIG_PARAM_AO_4,20);
         }
         else if(millis() - timer < 60000*2 && timer){ //decrease ACT1 pos from 75% to 25% over 2min
-          mxy = (double)((-1*timer/2400)+75)/100;
+          mxy = (double)((-1*(millis()-timer)/2400)+75)/100;
           if(mxy >= 0.25){set_config_parameter(CONFIG_PARAM_AO_1,(double)100*mxy);}//ACT1 Pos 0-100%
         } //hold ACT1 pos for 1min
         else if(60000*3 < millis() - timer < 60000*8){ //increase ACT1 pos from 25% to 75% over 5min
-          mxy = (double)((-1*timer/6000)+25)/100;
+          mxy = (double)((-1*(millis()-timer-60000*3)/6000)+25)/100;
           if(mxy <= 0.75){set_config_parameter(CONFIG_PARAM_AO_1,(double)100*mxy);} //ACT1 Pos 0-100%
         }
         else if(millis() - timer > 60000*8){
@@ -254,6 +257,7 @@ void E100control(){
         timer = 0;
         STATE = IDLE;
       }
+    break;
 
     case ESTOP:
       if(!timer){
