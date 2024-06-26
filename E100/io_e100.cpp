@@ -178,73 +178,31 @@ Ewma avgPT_CH7(0.02);
 
 
 #if defined(HARDWARE_1_2)
-// i2c, exp1, exp2, exp3 instance
-TwoWire i2c(20, 21);
-PI4IOE5V6534Q u65_io(EXP2_IO_ADDR, i2c);    // IO EXPANDER
-ADS7828 PT_Exp1;                            //ADC
-MCP4728 dac_Exp3;                           //DAC
-Adafruit_MCP9600 mcp1, mcp2, mcp3, mcp4, mcp5, mcp6, mcp7, mcp8; //Thermocouple (TC1, TC2, TC3, TC4, TC5, TC6, TC7, TC8)
-uint8_t mcpExist = 0;
-int errCnt = 0;
-
-//MCP9600
-// double TC1_coolant_temp_gas= 0;           //TB 32, TC105
-// double TC2_coolant_temp_gas= 0;           //TB 33, TC205
-// double TC3_gas_suction_temp= 0;           //TB 34, TC313
-// double TC4_oil_htr_temp= 0;               //TB 35, TC444
-// double TC5_oil_sump_temp= 0;              //TB 36, TC447
-// double TC6_RPSA1= 0;                      //TB 37
-// double TC7_RPSA2= 0;                      //TB 38
-// double TC8_SPARE= 0;                      //TB 39
-
-//MCP9600 Channel
-// Ewma avgTC1(1);
-// Ewma avgTC2(1);
-// Ewma avgTC3(1);
-// Ewma avgTC4(1);
-// Ewma avgTC5(1);
-// Ewma avgTC6(1);
-// Ewma avgTC7(1);
-// Ewma avgTC8(1);
-
-
-// The following deals with the MCP-9600 TCs
-// struct tt {
-//   String name;
-//   String key;
-//   double raw;
-//   double rawTemp;
-//   Ewma avg;
-//   double* value;
-//   double prev;
-//   int min;
-//   int minRecovery;
-//   int minPause;
-//   int max;
-//   int maxRecovery;
-//   int maxPause;
-//   double coef;
-//   int mcp;
-//   int channel;
-//   int pause;
-//   unsigned long overheat;
-//   unsigned long underheat;
-// } TTdata[] = {
-//   { "TC1_coolant_temp_gas", "TT809", 0, 0, avgTC1, &TC1_coolant_temp_gas, 0, -1, -1, 0, 140, 130, 0, 1, 1, -1, 0, 0, 0 },
-//   { "TC2_coolant_temp_gas", "TT810", 0, 0, avgTC2, &TC2_coolant_temp_gas, 0, -1, -1, 0, 140, 130, 0, 1, 2, -1, 0, 0, 0 },
-//   { "TC3_gas_suction_temp", "TT701", 0, 0, avgTC3, &TC3_gas_suction_temp, 0, -1, -1, 0, -1, -1,0,  -1, -1, -1, 0, 0, 0},
-//   { "TC4_oil_htr_temp", "TT715", 0, 0, avgTC4, &TC4_oil_htr_temp, 0, -1, -1, 0, 140, 130, 0, 1, 3, -1, 0, 0, 0 },
-//   { "TC5_oil_sump_temp", "TT520", 0, 0, avgTC5, &TC5_oil_sump_temp, 0, -1, -1, 0, 140, 130, 0, 1, 4, -1, 0, 0, 0 },
-//   { "TC6_RPSA1", "TT521", 0, 0, avgTC6, &TC6_RPSA1, 0, -1, -1, 0, 140, 130, 0, 1, 5, -1, 0, 0, 0 },
-//   { "TC7_RPSA2", "TT522", 0, 0, avgTC7, &TC7_RPSA2, 0, -1, -1, 0, 140, 130, 0, 1, 6, -1, 0, 0, 0 },
-//   { "TC8_SPARE", "TT522", 0, 0, avgTC8, &TC8_SPARE, 0, -1, -1, 0, 140, 130, 0, 1, 6, -1, 0, 0, 0 },
-// };
-// String errMsg[30] = { "" };
-
-
+  // i2c, exp1, exp2, exp3 instance
+  TwoWire i2c(20, 21);
+  PI4IOE5V6534Q u65_io(EXP2_IO_ADDR, i2c);    // IO EXPANDER
+  ADS7828 PT_Exp1;                            //ADC
+  MCP4728 dac_Exp3;                           //DAC
+  Adafruit_MCP9600 mcp1, mcp2, mcp3, mcp4, mcp5, mcp6, mcp7, mcp8; //Thermocouple (TC1, TC2, TC3, TC4, TC5, TC6, TC7, TC8)
+  uint8_t mcpExist = 0;
+  int errCnt = 0;
 #endif
 
-
+/*
+    Name:         float_map
+    Arguments:    float original_value    The original value to be rescaled
+                  float in_min            The origianl scale we are moving away from (lower limit)
+                  float in_max            The origianl scale we are moving away from (upper limit)
+                  float out_min           The new scale we are translating into (lower limit)
+                  float out_max           The new scale we are translating into (upper limit)
+    Returns:      float                   \The new value translated onto the new scale as a float
+    Description:  The map function provided by arduino only translates long integers. We need to scale some of the 
+                  PT values to decimal values with more accuracy and so a float equivilent was required. 
+*/
+float float_map(float original_value, float in_min, float in_max, float out_min, float out_max)
+{
+  return (original_value - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
 
 /*
     Name:         io_setup
@@ -593,65 +551,63 @@ void digital_io_loop()
   // **************** Digital Inputs ****** END *******************************
 }
 
-  void analog_io_loop(){
-    //EVO GAS DISCHARGE PRESSURE
-    // Mapping 250psi sensor provided by Gary Lai in email on 21/6/2024
-    set_config_parameter(CONFIG_PARAM_EVO_GAS_PX, map(avgPT_CH0.filter(EVO_DISCHARGE_PRESSURE_EXP.read(EVO_DISCHARGE_PRESSURE)), 819, 4095, 0, 250));
+void analog_io_loop(){
+  //EVO GAS DISCHARGE PRESSURE
+  // Mapping 250psi sensor provided by Gary Lai in email on 21/6/2024
+  set_config_parameter(CONFIG_PARAM_EVO_GAS_PX, map(avgPT_CH0.filter(EVO_DISCHARGE_PRESSURE_EXP.read(EVO_DISCHARGE_PRESSURE)), 819, 4095, 0, 250));
 
-    //PSA PRESS 1 - TB45 - Mapping 250psi sensor provided by Gary Lai in email on 21/6/2024
-    set_config_parameter(CONFIG_PARAM_PSA_PRESS_1_PX, map(avgPT_CH1.filter(PSA_PRESS_1_EXP.read(PSA_PRESS_1)), 819, 4095, 0, 250));
+  //PSA PRESS 1 - TB45 - Mapping 250psi sensor provided by Gary Lai in email on 21/6/2024
+  set_config_parameter(CONFIG_PARAM_PSA_PRESS_1_PX, map(avgPT_CH1.filter(PSA_PRESS_1_EXP.read(PSA_PRESS_1)), 819, 4095, 0, 250));
 
-    //PSA PRESS 2 - TB46 Mapping 250psi sensor provided by Gary Lai in email on 21/6/2024
-    set_config_parameter(CONFIG_PARAM_PSA_PRESS_2_PX, map(avgPT_CH2.filter(PSA_PRESS_2_EXP.read(PSA_PRESS_2)), 819, 4095, 0, 250));
+  //PSA PRESS 2 - TB46 Mapping 250psi sensor provided by Gary Lai in email on 21/6/2024
+  set_config_parameter(CONFIG_PARAM_PSA_PRESS_2_PX, map(avgPT_CH2.filter(PSA_PRESS_2_EXP.read(PSA_PRESS_2)), 819, 4095, 0, 250));
 
-    //FINAL GAS DISCHARGE PRESSURE - TB47 -  Mapping 250psi sensor provided by Gary Lai in email on 21/6/2024
-    set_config_parameter(CONFIG_PARAM_FINAL_GAS_DISCHARGE_PX, map(avgPT_CH3.filter(FINAL_DISCHARGE_PRESSURE_EXP.read(FINAL_DISCHARGE_PRESSURE)), 819, 4095, 0, 250));
+  //FINAL GAS DISCHARGE PRESSURE - TB47 -  Mapping 250psi sensor provided by Gary Lai in email on 21/6/2024
+  set_config_parameter(CONFIG_PARAM_FINAL_GAS_DISCHARGE_PX, map(avgPT_CH3.filter(FINAL_DISCHARGE_PRESSURE_EXP.read(FINAL_DISCHARGE_PRESSURE)), 819, 4095, 0, 250));
 
-    //ACT 1 POSITION - TB48 Mapping 0-100% sensor provided by Gary Lai in email on 21/6/2024
-    set_config_parameter(CONFIG_PARAM_ACT_1_PX, map(avgPT_CH4.filter(ACT_1_POSITION_EXP.read(ACT_1_POSITION)), 0, 4095, 0, 100));
+  //ACT 1 POSITION - TB48 Mapping 0-100% sensor provided by Gary Lai in email on 21/6/2024
+  set_config_parameter(CONFIG_PARAM_ACT_1_PX, map(avgPT_CH4.filter(ACT_1_POSITION_EXP.read(ACT_1_POSITION)), 0, 4095, 0, 100));
 
-    //ACT 2 POSITION - TB49 Mapping 0-100% sensor provided by Gary Lai in email on 21/6/2024
-    set_config_parameter(CONFIG_PARAM_ACT_2_PX, map(avgPT_CH5.filter(ACT_2_POSITION_EXP.read(ACT_2_POSITION)), 0, 4095, 0, 100));
+  //ACT 2 POSITION - TB49 Mapping 0-100% sensor provided by Gary Lai in email on 21/6/2024
+  set_config_parameter(CONFIG_PARAM_ACT_2_PX, map(avgPT_CH5.filter(ACT_2_POSITION_EXP.read(ACT_2_POSITION)), 0, 4095, 0, 100));
 
-    //PSA 1 FLOW - TB50
-    set_config_parameter(CONFIG_PARAM_PSA_1_PX, avgPT_CH6.filter(PSA_1_FLOW_EXP.read(PSA_1_FLOW)));
+  //PSA 1 FLOW - TB50
+  set_config_parameter(CONFIG_PARAM_PSA_1_PX, avgPT_CH6.filter(PSA_1_FLOW_EXP.read(PSA_1_FLOW)));
 
-    //GAS SUCTION PRESSURE - TB51 - Mapping 50psi sensor provided by Gary Lai in email on 21/6/2024
-    set_config_parameter(CONFIG_PARAM_GAS_SUCTION_PX, map(avgPT_CH7.filter(GAS_SUCTION_PRESSURE_EXP.read(GAS_SUCTION_PRESSURE)), 819, 4095, 0, 50));
+  //GAS SUCTION PRESSURE - TB51 - Mapping 50psi sensor provided by Gary Lai in email on 21/6/2024
+  set_config_parameter(CONFIG_PARAM_GAS_SUCTION_PX, float_map(avgPT_CH7.filter(GAS_SUCTION_PRESSURE_EXP.read(GAS_SUCTION_PRESSURE)), 819, 4095, 0, 50));
 
-    // TC105 - Coolant temp (Gas) - TB32
-    // if (mcp1.getStatus() & MCP960X_STATUS_INPUTRANGE){ // To be used after resistors are installed - See section 6.3.3 of datasheet
-    set_config_parameter(CONFIG_PARAM_TC105, mcp1.readThermocouple());
+  // TC105 - Coolant temp (Gas) - TB32
+  // if (mcp1.getStatus() & MCP960X_STATUS_INPUTRANGE){ // To be used after resistors are installed - See section 6.3.3 of datasheet
+  set_config_parameter(CONFIG_PARAM_TC105, mcp1.readThermocouple());
 
-    // TC205 - Coolant temp (Oil) - TB33
-    set_config_parameter(CONFIG_PARAM_TC205, mcp2.readThermocouple());
-    
-    // TC313 - Gas suction temp - TB34
-    set_config_parameter(CONFIG_PARAM_TC313, mcp3.readThermocouple());
+  // TC205 - Coolant temp (Oil) - TB33
+  set_config_parameter(CONFIG_PARAM_TC205, mcp2.readThermocouple());
+  
+  // TC313 - Gas suction temp - TB34
+  set_config_parameter(CONFIG_PARAM_TC313, mcp3.readThermocouple());
 
-    // TC444 - Oil heater temp - TB35
-    set_config_parameter(CONFIG_PARAM_TC444, mcp4.readThermocouple());
-    
-    // TC447 - Oil sump temp - TB36
-    set_config_parameter(CONFIG_PARAM_TC447, mcp5.readThermocouple());
+  // TC444 - Oil heater temp - TB35
+  set_config_parameter(CONFIG_PARAM_TC444, mcp4.readThermocouple());
+  
+  // TC447 - Oil sump temp - TB36
+  set_config_parameter(CONFIG_PARAM_TC447, mcp5.readThermocouple());
 
-    // TC.RPSA1 - TB37
-    set_config_parameter(CONFIG_PARAM_TC_RPSA1, mcp6.readThermocouple());
+  // TC.RPSA1 - TB37
+  set_config_parameter(CONFIG_PARAM_TC_RPSA1, mcp6.readThermocouple());
 
-    // TC.RPSA2 - TB38
-    set_config_parameter(CONFIG_PARAM_TC_RPSA2, mcp7.readThermocouple());
+  // TC.RPSA2 - TB38
+  set_config_parameter(CONFIG_PARAM_TC_RPSA2, mcp7.readThermocouple());
 
-    // TC.SPARE - TB39
-    set_config_parameter(CONFIG_PARAM_TC_SPARE, mcp8.readThermocouple());
-
-
-    //*************** ANALOG OUTPUTS ****************************
-
-   // The DAC - EXP3 is on the different I2C bus SCL1
-    dac_Exp3.analogWrite(MCP4728::DAC_CH::A, map(get_config_parameter(CONFIG_PARAM_AO_1, AS_INT),0,100,0,4095));
-    dac_Exp3.analogWrite(MCP4728::DAC_CH::B, map(get_config_parameter(CONFIG_PARAM_AO_2, AS_INT),0,100,0,4095));    
-    dac_Exp3.analogWrite(MCP4728::DAC_CH::C, map(get_config_parameter(CONFIG_PARAM_AO_3, AS_INT),0,100,0,4095));  
-    dac_Exp3.analogWrite(MCP4728::DAC_CH::D, map(get_config_parameter(CONFIG_PARAM_AO_4, AS_INT),0,100,0,4095));
-  }
+  // TC.SPARE - TB39
+  set_config_parameter(CONFIG_PARAM_TC_SPARE, mcp8.readThermocouple());
 
 
+  //*************** ANALOG OUTPUTS ****************************
+
+  // The DAC - EXP3 is on the different I2C bus SCL1
+  dac_Exp3.analogWrite(MCP4728::DAC_CH::A, map(get_config_parameter(CONFIG_PARAM_AO_1),0,100,0,4095));
+  dac_Exp3.analogWrite(MCP4728::DAC_CH::B, map(get_config_parameter(CONFIG_PARAM_AO_2),0,100,0,4095));    
+  dac_Exp3.analogWrite(MCP4728::DAC_CH::C, map(get_config_parameter(CONFIG_PARAM_AO_3),0,100,0,4095));  
+  dac_Exp3.analogWrite(MCP4728::DAC_CH::D, map(get_config_parameter(CONFIG_PARAM_AO_4),0,100,0,4095));
+}

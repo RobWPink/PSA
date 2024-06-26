@@ -91,36 +91,36 @@ void loop_two()
     E100control();
   }
 
-  // // ***** Receive and process the global RS_485 data *****************
-  // // Start by reading all available bytes in the buffer and storing them for processing
-  // while (Serial4.available()){
-  //   char thisChar = Serial4.read();
-  //   modbuxRxData(thisChar, RS_485_BUFFER);
-  // }
+  // ***** Receive and process the global RS_485 data *****************
+  // Start by reading all available bytes in the buffer and storing them for processing
+  while (Serial4.available()){
+    char thisChar = Serial4.read();
+    modbuxRxData(thisChar, RS_485_BUFFER);
+  }
 
-  // // Check the RS-485 Serial data MODBUS buffer and send any required responses to the Serial port
-  // if (modbus_loop(RS_485_BUFFER)){
-  //   int tx_bytes = get_tx_bytes(RS_485_BUFFER);
-  //   Serial4.write(get_tx_buffer(RS_485_BUFFER), tx_bytes);
-  // }
+  // Check the RS-485 Serial data MODBUS buffer and send any required responses to the Serial port
+  if (modbus_loop(RS_485_BUFFER)){
+    int tx_bytes = get_tx_bytes(RS_485_BUFFER);
+    Serial4.write(get_tx_buffer(RS_485_BUFFER), tx_bytes);
+  }
 
-  // // *********  VFD Writes *****************
-  // // 1 in 25 
-  // if ((process_controller % 25) == 0){
-  //   mb_temp_value = get_config_parameter(CONFIG_PARAM_VFD_ON_OFF_SETTING);
-  //   VFD.writeHreg(VFD_SLAVE_ID, RUNCOMAdr, &mb_temp_value, 1, cbWrite);
-  //   while (VFD.slave()) {
-  //     VFD.task();
-  //     yield();
-  //   }
+  // *********  VFD Writes *****************
+  // 1 in 25 
+  if ((process_controller % 25) == 0){
+    mb_temp_value = get_config_parameter(CONFIG_PARAM_VFD_ON_OFF_SETTING);
+    VFD.writeHreg(VFD_SLAVE_ID, RUNCOMAdr, &mb_temp_value, 1, cbWrite);
+    while (VFD.slave()) {
+      VFD.task();
+      yield();
+    }
     
-  //   mb_temp_value = get_config_parameter(CONFIG_PARAM_VFD_SPEED_SETTING);
-  //   VFD.writeHreg(VFD_SLAVE_ID, SpeedAdr, &mb_temp_value, 1, cbWrite);
-  //   while (VFD.slave()) {
-  //     VFD.task();
-  //     yield();
-  //   }
-  // }
-  // process_controller++;
+    mb_temp_value = get_config_parameter(CONFIG_PARAM_VFD_SPEED_SETTING);
+    VFD.writeHreg(VFD_SLAVE_ID, SpeedAdr, &mb_temp_value, 1, cbWrite);
+    while (VFD.slave()) {
+      VFD.task();
+      yield();
+    }
+  }
+  process_controller++;
 }
 

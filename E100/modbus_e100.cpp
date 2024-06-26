@@ -87,7 +87,10 @@ uint16_t readRegResponse(int i){
       reg_response_val = (uint16_t)get_config_parameter(CONFIG_PARAM_PSA_1_PX, AS_INT);
       break;
     case MODBUS_REG_GAS_SUCTION_PX:
-      reg_response_val = (uint16_t)get_config_parameter(CONFIG_PARAM_GAS_SUCTION_PX, AS_INT);
+      reg_response_val = get_config_parameter(CONFIG_PARAM_GAS_SUCTION_PX, LSB);
+      break;
+    case MODBUS_REG_GAS_SUCTION_PX+1:
+      reg_response_val = get_config_parameter(CONFIG_PARAM_GAS_SUCTION_PX, MSB);
       break;
     case MODBUS_REG_TC105:
       reg_response_val = (uint16_t)get_config_parameter(CONFIG_PARAM_TC105, AS_INT);
@@ -137,8 +140,11 @@ uint16_t readRegResponse(int i){
     case MODBUS_REG_SLAVE_ID:
       reg_response_val = SLAVE_ID; 
       break; 
-    case MODBUS_REG_PRODUCTION_EVO_DELTA_STEP:
-      reg_response_val = (uint16_t)get_config_parameter(CONFIG_PARAM_PRODUCTION_EVO_DELTA_STEP, AS_INT);
+    case MODBUS_REG_PRODUCTION_EVO_DELTA_STEP:    // **** 32-bit float
+      reg_response_val = get_config_parameter(CONFIG_PARAM_PRODUCTION_EVO_DELTA_STEP, LSB);
+      break;
+    case MODBUS_REG_PRODUCTION_EVO_DELTA_STEP+1:
+      reg_response_val = get_config_parameter(CONFIG_PARAM_PRODUCTION_EVO_DELTA_STEP, MSB);
       break;
     case MODBUS_REG_PRODUCTION_EVO_DELTA_TIME:
       reg_response_val = (uint16_t)get_config_parameter(CONFIG_PARAM_PRODUCTION_EVO_DELTA_TIME, AS_INT);
@@ -195,8 +201,11 @@ int writeRegResponse(int register_n, int16_t value){
         set_config_bit(CONFIG_PARAM_OP_STATE_ALL, false, OP_STATE_MANUAL_CONTROL);
       }
       break;
-    case MODBUS_REG_PRODUCTION_EVO_DELTA_STEP:
-      set_config_parameter(CONFIG_PARAM_PRODUCTION_EVO_DELTA_STEP, (float)value);
+    case MODBUS_REG_PRODUCTION_EVO_DELTA_STEP:  // ****** 32-bit float
+      set_config_parameter(CONFIG_PARAM_PRODUCTION_EVO_DELTA_STEP, value, LSB);
+      break;
+    case MODBUS_REG_PRODUCTION_EVO_DELTA_STEP+1:
+      set_config_parameter(CONFIG_PARAM_PRODUCTION_EVO_DELTA_STEP, value, MSB);
       break;
     case MODBUS_REG_PRODUCTION_EVO_DELTA_TIME:
       set_config_parameter(MODBUS_REG_PRODUCTION_EVO_DELTA_TIME, (float)value);

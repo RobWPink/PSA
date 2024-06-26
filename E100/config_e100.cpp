@@ -425,6 +425,15 @@ void set_config_parameter(int param, uint16_t param_value, int byte_n){
         operational_states.uint_value &= ~(1 << byte_n);
       }
       break;
+    // Setting of a 32-bit float using 2x 16-bit Modbus registers
+    case CONFIG_PARAM_PRODUCTION_EVO_DELTA_STEP:
+      if (byte_n == MSB){
+        EVI_1_Delta_Step.words[0] = param_value;
+      }else{
+        EVI_1_Delta_Step.words[1] = param_value;
+      }
+      eeprom_save();  // Save changes to this variable in persistent memory
+      break;
     default:
       break;
   }
