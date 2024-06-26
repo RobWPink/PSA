@@ -93,11 +93,16 @@ void waterDropoutControl(){
 }
 
 bool oilTempControl(){
-  if(get_config_parameter(CONFIG_PARAM_TC447) < 70){
+  double t = get_config_parameter(CONFIG_PARAM_TC313);
+  double x = (double)0.0003*pow(t,3) + 0.0042*pow(t,2) + 0.2704*t + 4.0598; //get Absolute humidity from inlet temp
+  double a = (double)pow(20.7846*sqrt(1.08E10*pow(x,2) - 2.82167E10*x + 3.14908E10) - 2.16E6*x + 2.82167E6,0.33333334);
+  double dewPoint = (double)12.9167 - 0.142498*a + 2536.83/a; //get pressure dew point
+
+  if(get_config_parameter(CONFIG_PARAM_TC447) < dewPoint-5){
     heater = true;
     set_config_bit(CONFIG_PARAM_RELAYS,false,RELAY_BIT_DIVERTER_XV);
   }
-  else if(get_config_parameter(CONFIG_PARAM_TC447) > 85){
+  else if(get_config_parameter(CONFIG_PARAM_TC447) > dewPoint+5){
     heater = false;
     set_config_bit(CONFIG_PARAM_RELAYS,true,RELAY_BIT_DIVERTER_XV);
   }
