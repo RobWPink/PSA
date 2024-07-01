@@ -151,7 +151,7 @@ void E100control(){
 
   set_config_bit(CONFIG_PARAM_RELAYS,true,RELAY_BIT_LOCAL_INTERLOCK);
 
-  set_config_bit(CONFIG_PARAM_RELAYS,!test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_LSR_IP),RELAY_BIT_AMBER_PILOT);
+  set_config_bit(CONFIG_PARAM_RELAYS,test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_LSR_IP),RELAY_BIT_AMBER_PILOT);
 
   if(test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_LOCAL_ESTOP)){
     errString = "ESTOP Detected!";
@@ -175,7 +175,7 @@ void E100control(){
       set_config_bit(CONFIG_PARAM_RELAYS,false,RELAY_BIT_READY_R050_1);
       set_config_bit(CONFIG_PARAM_RELAYS,false,RELAY_BIT_READY_R050_2);
       
-      if(greenButton && !test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_LSR_IP) && oilOK){ STATE = R050_OK; }
+      if(greenButton && test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_LSR_IP) && oilOK){ STATE = R050_OK; }
     break;
 		
     case R050_OK:

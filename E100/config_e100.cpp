@@ -77,7 +77,7 @@ void init_config()
   GAS_SUCTION_PX.number= -1;
 
   EVI_1_Delta_Step.number = 1;     // Default values
-  EVO1_Delta_Time.number = 250;
+  EVO1_Delta_Time.number  = 1230;
 }
 
 float get_config_parameter(int param){
