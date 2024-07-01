@@ -3,7 +3,6 @@
 #include "io_e100.h"
 //red button needs to be set for bluetooth reset
 
-#define SPTR_SIZE   20
 
 enum stt{
   IDLE,
@@ -28,6 +27,7 @@ double mxy = 0;
 bool greenButton, redButton = false;
 String errString = "";
 int flashGreen, flashAmber, flashRed = 0;
+
 
 void flashDriver(){
   if (!flashTimer[0] && flashGreen) { flashTimer[0] = millis(); }
@@ -97,6 +97,8 @@ bool oilTempControl(){
   double x = (double)0.0003*pow(t,3) + 0.0042*pow(t,2) + 0.2704*t + 4.0598; //get Absolute humidity from inlet temp
   double a = (double)pow(20.7846*sqrt(1.08E10*pow(x,2) - 2.82167E10*x + 3.14908E10) - 2.16E6*x + 2.82167E6,0.33333334);
   double dewPoint = (double)12.9167 - 0.142498*a + 2536.83/a; //get pressure dew point
+  if(20 < dewPoint < 110){;}
+  else{dewPoint = 80;}
 
   if(get_config_parameter(CONFIG_PARAM_TC447) < dewPoint-5){
     heater = true;
@@ -163,6 +165,16 @@ void E100control(){
   switch(STATE){
     case IDLE:
       set_config_bit(CONFIG_PARAM_RELAYS,false,RELAY_BIT_GREEN_PILOT);
+      set_config_bit(CONFIG_PARAM_RELAYS,false,RELAY_BIT_PSA1_VFD_RUN);
+      set_config_bit(CONFIG_PARAM_RELAYS,false,RELAY_BIT_PSA2_VFD_RUN);
+      set_config_bit(CONFIG_PARAM_RELAYS,false,RELAY_BIT_EVO_VFD_RUN);
+      set_config_bit(CONFIG_PARAM_RELAYS,false,RELAY_BIT_XV_RPSA1_GAS_FEED);
+      set_config_bit(CONFIG_PARAM_RELAYS,false,RELAY_BIT_XV_RPSA2_GAS_FEED);
+      set_config_bit(CONFIG_PARAM_RELAYS,false,RELAY_BIT_XV_RPSA1_VENT_GAS);
+      set_config_bit(CONFIG_PARAM_RELAYS,false,RELAY_BIT_XV_RPSA2_VENT_GAS);
+      set_config_bit(CONFIG_PARAM_RELAYS,false,RELAY_BIT_READY_R050_1);
+      set_config_bit(CONFIG_PARAM_RELAYS,false,RELAY_BIT_READY_R050_2);
+      
       if(greenButton && !test_config_parameter(CONFIG_PARAM_INPUTS,INPUT_BIT_LSR_IP) && oilOK){ STATE = R050_OK; }
     break;
 		

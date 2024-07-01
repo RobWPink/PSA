@@ -45,11 +45,8 @@ void setup() {
   pinMode(D3, INPUT); // DDR Global RS-485 - Set to input so that the data direction on the 485 Txcvr is unspecified 
   pinMode(D4, INPUT); // DDR Local RS-485 - Set to input so that the data direction on the 485 Txcvr is unspecified 
 
-  Serial.begin(9600);
-  while(!Serial);
-
+  Serial.begin(9600); // IMPORTANT Do not block if this serial port does not start up as we want to run even when the PC is not connected
   Serial4.begin(9600, SERIAL_8N1);      // GLOBAL RS-485
-  while(!Serial4);                      // Why is this Serial4 and not Serial6 as shown in the product description?
 
   init_config();
   Serial.println("Initialized!");

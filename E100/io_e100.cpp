@@ -606,8 +606,8 @@ void analog_io_loop(){
   //*************** ANALOG OUTPUTS ****************************
 
   // The DAC - EXP3 is on the different I2C bus SCL1
-  dac_Exp3.analogWrite(MCP4728::DAC_CH::A, map(get_config_parameter(CONFIG_PARAM_AO_1),0,100,0,4095));
-  dac_Exp3.analogWrite(MCP4728::DAC_CH::B, map(get_config_parameter(CONFIG_PARAM_AO_2),0,100,0,4095));    
-  dac_Exp3.analogWrite(MCP4728::DAC_CH::C, map(get_config_parameter(CONFIG_PARAM_AO_3),0,100,0,4095));  
-  dac_Exp3.analogWrite(MCP4728::DAC_CH::D, map(get_config_parameter(CONFIG_PARAM_AO_4),0,100,0,4095));
+  dac_Exp3.analogWrite(MCP4728::DAC_CH::A, map(get_config_parameter(CONFIG_PARAM_AO_1, AS_INT),0,100,0,4095));
+  dac_Exp3.analogWrite(MCP4728::DAC_CH::B, map(get_config_parameter(CONFIG_PARAM_AO_2, AS_INT),0,100,0,4095));    
+  dac_Exp3.analogWrite(MCP4728::DAC_CH::C, map(get_config_parameter(CONFIG_PARAM_AO_3, AS_INT),0,100,0,4095));  
+  dac_Exp3.analogWrite(MCP4728::DAC_CH::D, map(get_config_parameter(CONFIG_PARAM_AO_4, AS_INT),0,100,0,4095));
 }
